@@ -1,7 +1,6 @@
 // Dependencies
 var express = require("express");
 var bodyParser = require("body-parser");
-var mongojs = require("mongojs");
 var mongoose = require("mongoose");
 // Require axios and cheerio. This makes the scraping possible
 var axios = require("axios");
@@ -37,7 +36,7 @@ mongoose.connect(MONGODB_URI);
 
 // scrape from website and put in database
 app.get("/scrape", function(req, res) {
-  axios.get("https://techcrunch.com/").then(function(response) {
+  axios.get("https://news.ycombinator.com/").then(function(response) {
       var $ = cheerio.load(response.data);
       var results = {};
       $("header.post-block__header").each(function(i, element) {
