@@ -36,7 +36,7 @@ mongoose.connect(MONGODB_URI);
 
 // scrape from website and put in database
 app.get("/scrape", function(req, res) {
-  axios.get("https://news.ycombinator.com/").then(function(response) {
+  axios.get("https://techcrunch.com/").then(function(response) {
       var $ = cheerio.load(response.data);
       var results = {};
       $("header.post-block__header").each(function(i, element) {
