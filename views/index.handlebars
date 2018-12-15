@@ -1,0 +1,15 @@
+<div>
+  {{#each article}}
+    <div class="card mb-5">
+      <h5 class="card-header" style="background-color: #bebebe; color: #363636">{{this.title}}</h5>
+      <div class="card-body">
+        <p class="card-text">{{this.summary}}</p>
+        <a href="{{this.link}}" class="btn btn-dark">Article Source</a>
+        <button class="btn btn-dark" id="note" data-id="{{this._id}}">Make Article Note</button>
+        <button class="btn btn-dark" id="show-note" data-id="{{this._id}}">Show Notes</button>
+      </div>
+      <div class="card-footer"></div>
+    </div>
+  {{/each}}
+</div>
+
