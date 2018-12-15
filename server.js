@@ -32,82 +32,89 @@ mongoose.connect(MONGODB_URI);
 
 
 
+// *******************************************************************************************************
 
 
-
-
-
-
-
-
-// Database configuration
-var databaseUrl = "scraper";
-var collections = ["scrapedData"];
-
-
-
-// Hook mongojs configuration to the db variable
-var db = mongojs(databaseUrl, collections);
-db.on("error", function(error) {
-  console.log("Database Error:", error);
-});
-
-// Main route (simple Hello World Message)
-app.get("/", function(req, res) {
-  res.send("Hello world");
-});
-
-// Retrieve data from the db
-app.get("/all", function(req, res) {
-  // Find all results from the scrapedData collection in the db
-  db.scrapedData.find({}, function(error, found) {
-    // Throw any errors to the console
-    if (error) {
-      console.log(error);
-    }
-    // If there are no errors, send the data to the browser as json
-    else {
-      res.json(found);
-    }
-  });
-});
-
-// Scrape data from one site and place it into the mongodb db
+// scrape from website and put in database
 app.get("/scrape", function(req, res) {
-  // Make a request via axios for the news section of `ycombinator`
-  axios.get("https://news.ycombinator.com/").then(function(response) {
-    // Load the html body from axios into cheerio
-    var $ = cheerio.load(response.data);
-    // For each element with a "title" class
-    $(".title").each(function(i, element) {
-      // Save the text and href of each link enclosed in the current element
-      var title = $(element).children("a").text();
-      var link = $(element).children("a").attr("href");
-
-      // If this found element had both a title and a link
-      if (title && link) {
-        // Insert the data in the scrapedData db
-        db.scrapedData.insert({
-          title: title,
-          link: link
-        },
-        function(err, inserted) {
-          if (err) {
-            // Log the error if one is encountered during the query
-            console.log(err);
-          }
-          else {
-            // Otherwise, log the inserted data
-            console.log(inserted);
-          }
-        });
-      }
-    });
-  });
-
-  // Send a "Scrape Complete" message to the browser
-  res.send("Scrape Complete");
+  axios.get("https://techcrunch.com/").then(function(response) {
+      var $ = cheerio.load(response.data);
+      var results = {};
+      $("header.post-block__header").each(function(i, element) {
+          results.title = $(element).children("h2").text().replace(/\s+/g, ' ').toUpperCase();
+          results.link = $(element).children().children().attr("href");
+          results.summary = $(element).siblings().text().replace(/\s+/g, ' ');
+          db.Article.remove({}).then(function(data) {
+              console.log(data);
+          })
+          .catch(function(err) {
+              return res.json(err);
+          })
+          db.Article.create(results)
+          .then(function(dbArticle) {
+              // View the added result in the console
+              console.log(dbArticle);
+          })
+          .catch(function(err) {
+              // If an error occurred, send it to the client
+              return res.json(err);
+          });        
+      })
+      console.log("Scrape attempted: check localhost:" + PORT + "/scrape");
+      res.send("Scrape Complete");
+  })
 });
+
+// handlebars route
+app.get("/", function(req, res) {
+  db.Article.find({}).then(function(data) {
+      var resultObject = {
+          article: data,
+      };
+      res.render("index", resultObject);
+  })
+})
+
+// articles route
+app.get("/articles", function(req, res) {
+  db.Article.find({})
+      .then(function(data) {
+          res.json(data);
+      })
+      .catch(function(err) {
+          res.json(err);
+      })
+})
+
+// Route for grabbing a specific Article by id, populate it with it's note
+app.get("/articles/:id", function(req, res) {
+  db.Article.findOne({ _id: req.params.id })
+    .populate("note")
+    .then(function(dbArticle) {
+      res.json(dbArticle);
+    })
+    .catch(function(err) {
+      res.json(err);
+    });
+});
+
+// Route for saving/updating an Article's associated Note
+app.post("/articles/:id", function(req, res) {
+  db.Note.create(req.body)
+    .then(function(dbNote) {
+      return db.Article.findOneAndUpdate({ _id: req.params.id }, { note: dbNote._id }, { new: true });
+    })
+    .then(function(dbArticle) {
+      res.json(dbArticle);
+    })
+    .catch(function(err) {
+      res.json(err);
+    });
+});
+
+
+
+// *******************************************************************************************************
 
 
 // Listen on port 3000
